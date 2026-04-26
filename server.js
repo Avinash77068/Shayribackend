@@ -251,6 +251,24 @@ app.get('/api/users', (req, res) => {
   }
 });
 
+// Get user statistics
+app.get('/api/users/stats', (req, res) => {
+  try {
+    const stats = UserRepository.getUserStats();
+    
+    res.json({
+      success: true,
+      data: stats
+    });
+  } catch (error) {
+    res.status(500).json({
+      success: false,
+      error: 'Failed to fetch user statistics',
+      message: error.message
+    });
+  }
+});
+
 // Get user by ID
 app.get('/api/users/:id', (req, res) => {
   try {
@@ -272,24 +290,6 @@ app.get('/api/users/:id', (req, res) => {
     res.status(500).json({
       success: false,
       error: 'Failed to fetch user',
-      message: error.message
-    });
-  }
-});
-
-// Get user statistics
-app.get('/api/users/stats', (req, res) => {
-  try {
-    const stats = UserRepository.getUserStats();
-    
-    res.json({
-      success: true,
-      data: stats
-    });
-  } catch (error) {
-    res.status(500).json({
-      success: false,
-      error: 'Failed to fetch user statistics',
       message: error.message
     });
   }
@@ -398,6 +398,61 @@ app.get('/api/analytics', (req, res) => {
     res.status(500).json({
       success: false,
       error: 'Failed to fetch analytics',
+      message: error.message
+    });
+  }
+});
+
+// Get engagement analytics
+app.get('/api/analytics/engagement', (req, res) => {
+  try {
+    const allShayris = PoetryRepository.getAllShayri();
+    
+    // Calculate engagement metrics
+    const totalEngagement = allShayris.reduce((acc, shayri) => ({
+      views: acc.views + (shayri.metadata?.views || 0),
+      shares: acc.shares + (shayri.metadata?.shares || 0),
+      likes: acc.likes + Math.floor((shayri.metadata?.views || 0) * 0.1)
+    }), { views: 0, shares: 0, likes: 0 });
+
+    const engagementData = {
+      views: totalEngagement.views,
+      shares: totalEngagement.shares,
+      likes: totalEngagement.likes,
+      avgViewsPerShayri: allShayris.length > 0 ? Math.round(totalEngagement.views / allShayris.length) : 0,
+      avgSharesPerShayri: allShayris.length > 0 ? Math.round(totalEngagement.shares / allShayris.length) : 0,
+      engagementRate: totalEngagement.views > 0 ? ((totalEngagement.shares / totalEngagement.views) * 100).toFixed(2) : "0.00"
+    };
+
+    res.json({
+      success: true,
+      data: engagementData
+    });
+  } catch (error) {
+    res.status(500).json({
+      success: false,
+      error: 'Failed to fetch engagement analytics',
+      message: error.message
+    });
+  }
+});
+
+// Get trends analytics
+app.get('/api/analytics/trends', (req, res) => {
+  try {
+    const allShayris = PoetryRepository.getAllShayri();
+    
+    // Generate monthly trends (last 6 months)
+    const monthlyTrends = generateMonthlyTrends(allShayris);
+
+    res.json({
+      success: true,
+      data: monthlyTrends
+    });
+  } catch (error) {
+    res.status(500).json({
+      success: false,
+      error: 'Failed to fetch trends analytics',
       message: error.message
     });
   }

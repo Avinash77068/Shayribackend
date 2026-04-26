@@ -56,6 +56,154 @@ app.get('/health', (req, res) => {
 });
 
 // ====================
+// AUTHENTICATION ENDPOINTS
+// ====================
+
+// Login endpoint
+app.post('/api/auth/login', (req, res) => {
+  try {
+    const { email, password } = req.body;
+
+    if (!email || !password) {
+      return res.status(400).json({
+        success: false,
+        error: 'Email and password are required'
+      });
+    }
+
+    // Find user by email
+    const user = UserRepository.getAllUsers().find(u => u.email === email);
+
+    if (!user) {
+      return res.status(401).json({
+        success: false,
+        error: 'Invalid credentials'
+      });
+    }
+
+    // For demo purposes, accept any password for existing users
+    // In production, you would hash and verify passwords
+    
+    // Generate a simple token (in production, use JWT)
+    const token = 'token_' + Date.now() + '_' + user.id;
+
+    // Remove sensitive data
+    const { password: _, ...userWithoutPassword } = user;
+
+    res.json({
+      success: true,
+      data: {
+        user: userWithoutPassword,
+        token: token
+      },
+      message: 'Login successful'
+    });
+
+  } catch (error) {
+    console.error('Login error:', error);
+    res.status(500).json({
+      success: false,
+      error: 'Internal server error',
+      message: error.message
+    });
+  }
+});
+
+// Register endpoint (for future use)
+app.post('/api/auth/register', (req, res) => {
+  try {
+    const { name, email, password } = req.body;
+
+    if (!name || !email || !password) {
+      return res.status(400).json({
+        success: false,
+        error: 'Name, email and password are required'
+      });
+    }
+
+    // Check if user already exists
+    const existingUser = UserRepository.getAllUsers().find(u => u.email === email);
+
+    if (existingUser) {
+      return res.status(409).json({
+        success: false,
+        error: 'User with this email already exists'
+      });
+    }
+
+    // Create new user (simplified for demo)
+    const newUser = {
+      id: Date.now(),
+      name: name,
+      email: email,
+      role: 'user',
+      status: 'active',
+      permissions: ['read', 'write'],
+      createdAt: new Date().toISOString()
+    };
+
+    // Generate token
+    const token = 'token_' + Date.now() + '_' + newUser.id;
+
+    res.status(201).json({
+      success: true,
+      data: {
+        user: newUser,
+        token: token
+      },
+      message: 'Registration successful'
+    });
+
+  } catch (error) {
+    console.error('Registration error:', error);
+    res.status(500).json({
+      success: false,
+      error: 'Internal server error',
+      message: error.message
+    });
+  }
+});
+
+// Verify token endpoint
+app.get('/api/auth/verify', (req, res) => {
+  try {
+    const token = req.headers.authorization?.replace('Bearer ', '');
+
+    if (!token) {
+      return res.status(401).json({
+        success: false,
+        error: 'No token provided'
+      });
+    }
+
+    // For demo purposes, accept any valid-looking token
+    // In production, verify JWT token
+    if (token.startsWith('token_')) {
+      res.json({
+        success: true,
+        data: {
+          valid: true,
+          message: 'Token is valid'
+        }
+      });
+    } else {
+      res.status(401).json({
+        success: false,
+        error: 'Invalid token'
+      });
+    }
+
+  } catch (error) {
+    console.error('Token verification error:', error);
+    res.status(500).json({
+      success: false,
+      error: 'Internal server error',
+      message: error.message
+    });
+  }
+});
+
+// ====================
 // POETRY ENDPOINTS
 // ====================
 
